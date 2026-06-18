@@ -41,6 +41,16 @@ Do NOT use these tools when:
 
 ## Critical Workflow Rules
 
+### NEVER Merge Cells
+
+**This is the #1 cause of formatting failures.** Merged cells cause Excel to throw blocking dialogs when xlwings tries to format them later. The AppleScript bridge freezes and the operation times out.
+
+Rules:
+- NEVER use `merge()` or pass merged-range data through `excel_write_range`
+- Do NOT write a title that spans columns as a single merged row
+- Instead, write the title to cell A1 and color the entire row (A1:D1) without merging
+- If cells ARE already merged (from a prior write), unmerge them FIRST before any formatting
+
 ### Before Reading Large Data
 ALWAYS call `excel_get_used_range` first to learn the dimensions. Do NOT probe row counts by reading A500, A1000, A5000, etc. One call tells you exactly how many rows and columns exist.
 
@@ -48,7 +58,7 @@ ALWAYS call `excel_get_used_range` first to learn the dimensions. Do NOT probe r
 CSV files opened in Excel can only have one sheet. You CANNOT add sheets with `excel_add_sheet`. If you need multiple sheets:
 1. Create a new workbook with `excel_new_workbook`
 2. Write your dashboard/summary to the new workbook
-3. Reference data from the CSV workbook using cross-workbook formulas like `='[filename.csv]Sheet1'!A1:D100`
+3. Reference data from the CSV workbook using cross-workbook formulas
 
 Or alternatively:
 1. Save the CSV as .xlsx first: `excel_save_workbook(workbook="file.csv", path="/path/to/file.xlsx")`
@@ -85,32 +95,171 @@ For workbooks with thousands of rows, do NOT try to read the entire dataset into
 - If "Workbook not found" → call `excel_list_workbooks` to show what's available
 - If macOS permission error → direct user to System Settings → Privacy & Security → Automation
 
-## Formatting Guidance
+## Formatting via xlwings Scripts (REQUIRED APPROACH)
 
-The xlwings bridge does not directly expose cell formatting (colors, borders, column widths) through these MCP tools. For formatting:
-- Use VBA macros if the workbook has them (`excel_run_macro`)
-- For new formatted workbooks, use the file-based `excel-tools` `build_excel_shell` tool to create the formatted structure first, then open with `excel_open_workbook` and populate with `excel_write_range`
+The MCP tools do NOT expose cell formatting (colors, fonts, borders, column widths). To format cells, you MUST use a standalone xlwings Python script executed via bash.
+
+### Key Rules
+1. **Always do ALL formatting in a SINGLE script** — do not split into multiple steps
+2. **Always unmerge first** if any prior operation may have merged cells
+3. **Write the script to a file** (`/tmp/format_excel.py`) — do NOT use inline `-c` strings (multiline breaks in conda)
+4. **Use a 60-second timeout** — xlwings over AppleScript is slow for bulk operations
+5. **Never use AppleScript heredocs** for formatting — they timeout on complex operations
+
+### The Pattern (One Script, One Execution)
+
+```python
+# Write to /tmp/format_excel.py, then run:
+# conda run -n base python /tmp/format_excel.py
+# Timeout: 60000ms
+
+import xlwings as xw
+
+wb = xw.Book("workbook_name.xlsx")
+ws = wb.sheets["Sheet Name"]
+
+# STEP 1: Always unmerge first (prevents blocking dialogs)
+ws.range("A1:Z100").api.unmerge()
+
+# STEP 2: Column widths
+ws.range("A:A").column_width = 34
+ws.range("B:B").column_width = 18
+
+# STEP 3: Colors and fonts (all in one pass)
+NAVY = (23, 42, 69)
+WHITE = (255, 255, 255)
+ACCENT_BLUE = (41, 128, 185)
+LIGHT_GRAY = (245, 247, 250)
+
+# Title
+ws.range("A1").font.size = 18
+ws.range("A1").font.bold = True
+ws.range("A1").font.color = WHITE
+ws.range("A1:D1").color = NAVY
+ws.range("A1").row_height = 38
+
+# Table headers
+ws.range("A5:D5").color = ACCENT_BLUE
+ws.range("A5:D5").font.color = WHITE
+ws.range("A5:D5").font.bold = True
+
+# Alternating rows
+for i in range(6, 20):
+    ws.range(f"A{i}:D{i}").color = LIGHT_GRAY if i % 2 == 0 else WHITE
+
+# STEP 4: Hide gridlines
+try:
+    wb.app.api.active_window.display_gridlines.set(False)
+except:
+    pass
+
+# STEP 5: Borders (optional — may fail silently on some setups)
+tables = ["A5:D19"]
+for t in tables:
+    rng = ws.range(t)
+    for edge in range(7, 13):
+        try:
+            border = rng.api.borders[edge]
+            border.line_style.set(1)
+            border.weight.set(2)
+            border.color.set(14277081)
+        except:
+            pass
+
+# STEP 6: Save
+wb.save()
+print("Done")
+```
+
+### Color Palette (Standard Professional)
+
+```python
+NAVY = (23, 42, 69)         # Dark headers, title bars
+WHITE = (255, 255, 255)     # White text on dark bg, clean rows
+LIGHT_GRAY = (245, 247, 250)  # Alternating row shading
+ACCENT_BLUE = (41, 128, 185)  # Table headers, links
+RED_ALERT = (192, 57, 43)   # Warning/risk highlights
+GREEN_GOOD = (39, 174, 96)  # Positive/healthy highlights
+GOLD = (212, 175, 55)       # Premium accent
+```
+
+### What Works vs What Doesn't
+
+| Operation | Works? | Notes |
+|---|---|---|
+| `.color = (R,G,B)` on range | Yes | Background fill |
+| `.font.color = (R,G,B)` | Yes | Text color |
+| `.font.bold = True` | Yes | |
+| `.font.size = N` | Yes | |
+| `.font.italic = True` | Yes | |
+| `.font.name = "Calibri"` | Yes | |
+| `.row_height = N` | Yes | |
+| `.column_width = N` | Yes | |
+| `.api.unmerge()` | Yes | Required before formatting merged cells |
+| `.merge()` | AVOID | Causes blocking dialogs on subsequent operations |
+| `.api.borders[N]` | Yes | May fail silently; wrap in try/except |
+| `display_gridlines.set(False)` | Yes | Wrap in try/except |
+| `.number_format` | Yes | Number formatting (e.g., "#,##0") |
+
+### Execution Command
+
+```bash
+conda run -n base python /tmp/format_excel.py
+```
+
+Always use timeout of **60000ms** (60 seconds). xlwings formatting operations are slow because each property set is a separate AppleScript call to Excel.
 
 ## Financial Model Workflow
 
 When building structured .xlsx/.xlsm files (budgets, forecasts, models):
 
 1. **Open the template or existing file**: `excel_open_workbook(file_path="...")`
-2. **Write Assumptions sheet**: key inputs, rates, date ranges, sources
-3. **Write Calculations sheet**: formulas that reference assumption cells
-4. **Write Summary sheet**: headline outputs, charts data, key metrics
-5. **Write Data sheet**: raw source data for auditability
-6. **Add formulas**: link cells between sheets using `excel_write_cell`
-7. **Save**: `excel_save_workbook()`
+2. **Write all data using MCP tools**: headers, formulas, values via `excel_write_range` and `excel_write_cell`
+3. **Format in one script**: Write a single Python file that applies ALL formatting (colors, widths, heights, borders, gridlines) and run it once
+4. **Save**: `excel_save_workbook()`
 
-This creates a live, interactive experience where the user watches the file build in real time.
+### Complete Build + Format Workflow (Two Steps Only)
+
+**Step 1 — Data (via MCP tools):**
+- `excel_add_sheet` → create the sheet
+- `excel_write_range` → write headers + data + formulas (NO merges)
+- Verify with `excel_read_range`
+
+**Step 2 — Format (via single Python script):**
+- Write `/tmp/format_excel.py` with ALL formatting
+- Run once with 60s timeout
+- Done
+
+This is a TWO-STEP workflow. Not three. Not five. Two.
 
 ## Interaction Pattern
 
 The ideal workflow is conversational:
-1. Kiro computes or pulls data
-2. Kiro writes to Excel (user sees it instantly)
+1. Kiro writes data/formulas to Excel via MCP tools (user sees values appear)
+2. Kiro applies professional formatting in one script (user sees colors/styling appear)
 3. User reviews and requests changes
-4. Kiro updates specific cells
-5. Repeat until complete
-6. Save final version
+4. Kiro updates specific cells or re-runs format script
+5. Save final version
+
+## Troubleshooting
+
+### Script Hangs / Times Out
+- **Cause**: Merged cells from a prior write. Excel shows a dialog that blocks the AppleScript bridge.
+- **Fix**: Add `ws.range("A1:Z100").api.unmerge()` as the FIRST line of the formatting script.
+
+### "Excel is not running"
+- Open Excel manually or use `excel_open_workbook` with a file path.
+
+### "Workbook not found"
+- Call `excel_list_workbooks` to confirm what's open.
+
+### Multiline Python in `-c` Flag Breaks
+- **Cause**: `conda run -n base python -c "..."` flattens multiline strings.
+- **Fix**: ALWAYS write to a file first (`/tmp/script.py`), then execute the file.
+
+### AppleScript Heredocs Don't Work for Complex Operations
+- **Cause**: `osascript << 'EOF'` works for simple single-property calls but times out on bulk formatting.
+- **Fix**: Use xlwings Python scripts instead. They batch operations more efficiently.
+
+### conda Entry Point Warning
+- The message `Error while loading conda entry point: conda-libmamba-solver` is harmless. Ignore it. The script still executes correctly.
