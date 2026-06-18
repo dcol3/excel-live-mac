@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Dark rounded background -->
+  <rect width="256" height="256" rx="32" fill="#1a1a2e"/>
+  
+  <!-- Monitor body -->
+  <rect x="40" y="45" width="176" height="120" rx="10" fill="#2d2d44" stroke="#4a4a6a" stroke-width="3"/>
+  
+  <!-- Screen area -->
+  <rect x="52" y="57" width="152" height="96" rx="4" fill="#1e6f3e"/>
+  
+  <!-- Spreadsheet grid lines - vertical -->
+  <line x1="92" y1="57" x2="92" y2="153" stroke="#2a9d4e" stroke-width="1.5" opacity="0.7"/>
+  <line x1="132" y1="57" x2="132" y2="153" stroke="#2a9d4e" stroke-width="1.5" opacity="0.7"/>
+  <line x1="172" y1="57" x2="172" y2="153" stroke="#2a9d4e" stroke-width="1.5" opacity="0.7"/>
+  
+  <!-- Spreadsheet grid lines - horizontal -->
+  <line x1="52" y1="77" x2="204" y2="77" stroke="#2a9d4e" stroke-width="1.5" opacity="0.7"/>
+  <line x1="52" y1="97" x2="204" y2="97" stroke="#2a9d4e" stroke-width="1.5" opacity="0.7"/>
+  <line x1="52" y1="117" x2="204" y2="117" stroke="#2a9d4e" stroke-width="1.5" opacity="0.7"/>
+  <line x1="52" y1="137" x2="204" y2="137" stroke="#2a9d4e" stroke-width="1.5" opacity="0.7"/>
+  
+  <!-- Header row highlight -->
+  <rect x="52" y="57" width="152" height="20" rx="4" fill="#2a9d4e" opacity="0.4"/>
+  
+  <!-- Active cell highlight -->
+  <rect x="93" y="98" width="38" height="19" fill="#4ade80" opacity="0.3" stroke="#4ade80" stroke-width="2"/>
+  
+  <!-- Cell content indicators (small bars representing data) -->
+  <rect x="60" y="83" width="24" height="8" rx="2" fill="#6ee7a0" opacity="0.6"/>
+  <rect x="100" y="83" width="18" height="8" rx="2" fill="#6ee7a0" opacity="0.6"/>
+  <rect x="140" y="83" width="26" height="8" rx="2" fill="#6ee7a0" opacity="0.6"/>
+  <rect x="180" y="83" width="16" height="8" rx="2" fill="#6ee7a0" opacity="0.6"/>
+  
+  <rect x="60" y="103" width="20" height="8" rx="2" fill="#6ee7a0" opacity="0.6"/>
+  <rect x="100" y="103" width="30" height="8" rx="2" fill="#ffffff" opacity="0.8"/>
+  <rect x="140" y="103" width="14" height="8" rx="2" fill="#6ee7a0" opacity="0.6"/>
+  <rect x="180" y="103" width="20" height="8" rx="2" fill="#6ee7a0" opacity="0.6"/>
+  
+  <rect x="60" y="123" width="16" height="8" rx="2" fill="#6ee7a0" opacity="0.6"/>
+  <rect x="100" y="123" width="22" height="8" rx="2" fill="#6ee7a0" opacity="0.6"/>
+  <rect x="140" y="123" width="28" height="8" rx="2" fill="#6ee7a0" opacity="0.6"/>
+  <rect x="180" y="123" width="12" height="8" rx="2" fill="#6ee7a0" opacity="0.6"/>
+  
+  <rect x="60" y="143" width="28" height="8" rx="2" fill="#6ee7a0" opacity="0.6"/>
+  <rect x="100" y="143" width="16" height="8" rx="2" fill="#6ee7a0" opacity="0.6"/>
+  <rect x="140" y="143" width="20" height="8" rx="2" fill="#6ee7a0" opacity="0.6"/>
+  <rect x="180" y="143" width="18" height="8" rx="2" fill="#6ee7a0" opacity="0.6"/>
+  
+  <!-- Monitor stand -->
+  <rect x="108" y="165" width="40" height="12" rx="2" fill="#2d2d44"/>
+  <rect x="96" y="177" width="64" height="8" rx="4" fill="#3d3d54"/>
+  
+  <!-- Live indicator dot (pulsing green) -->
+  <circle cx="196" y="200" r="8" fill="#4ade80"/>
+  <circle cx="196" cy="200" r="8" fill="#4ade80"/>
+  <circle cx="196" cy="200" r="5" fill="#22c55e"/>
+  
+  <!-- "LIVE" text -->
+  <text x="172" y="204" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="bold" fill="#4ade80">LIVE</text>
+  
+  <!-- Small Apple-esque notch on monitor -->
+  <rect x="118" y="45" width="20" height="4" rx="2" fill="#3d3d54"/>
+</svg>
