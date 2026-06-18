@@ -4,7 +4,9 @@
       "command": "uvx",
       "args": ["--from", "git+https://github.com/dcol3/excel-live-mac", "excel-live-mac"],
       "env": {},
-      "disabled": false
+      "disabled": false,
+      "timeout": 120000,
+      "transport": "stdio"
     }
   }
 }

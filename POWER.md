@@ -18,9 +18,20 @@ author: "Dillon Cole"
    ```
 4. **macOS Automation permission** — On first use, macOS will prompt you to allow Terminal (or your IDE) to control Excel. Grant this in System Settings → Privacy & Security → Automation
 
+## First-Run Note (Important)
+
+On **first install**, uvx downloads and builds the server and all dependencies (including compiling `cryptography` from source). This takes 30–60 seconds. During this time, Kiro's MCP connection attempt may time out.
+
+**If the server shows as "not connected" after install:**
+1. Wait 60 seconds for the initial build to complete
+2. Open the Kiro feature panel → MCP Servers → find `excel-live-mac` → click reconnect
+3. Or use Command Palette (Cmd+Shift+P) → search "MCP" → reconnect
+
+After the first build, subsequent launches take 1–2 seconds (everything is cached).
+
 ## Quick Test
 
-After installation, open any `.xlsx` file in Excel, then ask Kiro:
+After installation and successful connection, open any `.xlsx` file in Excel, then ask Kiro:
 > "List all open workbooks"
 
 If it returns the workbook name, you're connected.
@@ -119,6 +130,8 @@ excel_open_workbook(file_path="/Users/me/Documents/report.xlsx")
 
 ## Troubleshooting
 
+**Server shows "not connected" after install**: This is the most common issue. On first install, uvx builds the server from source (30–60s). Kiro's connection attempt times out during this build. Solution: wait 60s, then reconnect the server from the MCP Servers panel or Command Palette.
+
 **"Excel is not running"**: Open Excel manually or use `excel_open_workbook` with a file path.
 
 **"Cannot connect to Excel"**: Check that macOS Automation permission is granted. Go to System Settings → Privacy & Security → Automation → ensure your terminal/IDE can control Microsoft Excel.
@@ -138,11 +151,15 @@ excel_open_workbook(file_path="/Users/me/Documents/report.xlsx")
       "command": "uvx",
       "args": ["--from", "git+https://github.com/dcol3/excel-live-mac", "excel-live-mac"],
       "env": {},
-      "disabled": false
+      "disabled": false,
+      "timeout": 120000,
+      "transport": "stdio"
     }
   }
 }
 ```
+
+The `timeout: 120000` (120 seconds) is critical — it allows enough time for the first-run build. After caching, the server starts in under 2 seconds, but the timeout prevents connection failures on initial install.
 
 ## License
 
