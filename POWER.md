@@ -136,7 +136,7 @@ excel_open_workbook(file_path="/Users/me/Documents/report.xlsx")
   "mcpServers": {
     "excel-live-mac": {
       "command": "uvx",
-      "args": ["excel-live-mac@latest"],
+      "args": ["--from", "git+https://github.com/dcol3/excel-live-mac", "excel-live-mac"],
       "env": {},
       "disabled": false
     }

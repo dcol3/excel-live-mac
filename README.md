@@ -31,7 +31,7 @@ https://github.com/dcol3/excel-live-mac
 ### For any MCP client (via uvx)
 
 ```bash
-uvx excel-live-mac
+uvx --from git+https://github.com/dcol3/excel-live-mac excel-live-mac
 ```
 
 Or add to your MCP config:
@@ -40,7 +40,7 @@ Or add to your MCP config:
   "mcpServers": {
     "excel-live-mac": {
       "command": "uvx",
-      "args": ["excel-live-mac@latest"],
+      "args": ["--from", "git+https://github.com/dcol3/excel-live-mac", "excel-live-mac"],
       "disabled": false
     }
   }
