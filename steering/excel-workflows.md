@@ -28,13 +28,41 @@ Do NOT use these tools when:
 | Task | Tool | Notes |
 |---|---|---|
 | See what's open | `excel_list_workbooks` | Good first step to orient |
-| Read data | `excel_read_range` | Use `expand=true` for tables |
-| Write a table of data | `excel_write_range` | 2D array, instant in Excel |
+| Check data size (rows/cols) | `excel_get_used_range` | ALWAYS call this before reading large data. Avoids probing row counts manually. |
+| Read data | `excel_read_range` | Use `expand=true` for tables. For large datasets (>500 rows), read only what you need. |
+| Write a table of data | `excel_write_range` | 2D array, instant in Excel. Rows auto-padded to equal length. |
 | Write a single value or formula | `excel_write_cell` | Formulas start with `=` |
-| Open a file | `excel_open_workbook` | Launches Excel if needed |
-| Save work | `excel_save_workbook` | Optionally save-as with path |
+| Create a new blank workbook | `excel_new_workbook` | Use when you need a new file (dashboards, reports). Save after with a path. |
+| Open a file | `excel_open_workbook` | Opens an EXISTING file. Do NOT use to create new files. |
+| Add a sheet/tab | `excel_add_sheet` | Only works on .xlsx/.xlsm. Does NOT work on CSV files. |
+| Save work | `excel_save_workbook` | Optionally save-as with path (use to convert CSV to .xlsx) |
 | Run a macro | `excel_run_macro` | Macro must exist in workbook |
 | Check user selection | `excel_get_selection` | Contextual awareness |
+
+## Critical Workflow Rules
+
+### Before Reading Large Data
+ALWAYS call `excel_get_used_range` first to learn the dimensions. Do NOT probe row counts by reading A500, A1000, A5000, etc. One call tells you exactly how many rows and columns exist.
+
+### CSV Files Are Single-Sheet
+CSV files opened in Excel can only have one sheet. You CANNOT add sheets with `excel_add_sheet`. If you need multiple sheets:
+1. Create a new workbook with `excel_new_workbook`
+2. Write your dashboard/summary to the new workbook
+3. Reference data from the CSV workbook using cross-workbook formulas like `='[filename.csv]Sheet1'!A1:D100`
+
+Or alternatively:
+1. Save the CSV as .xlsx first: `excel_save_workbook(workbook="file.csv", path="/path/to/file.xlsx")`
+2. Then add sheets to the .xlsx version
+
+### Writing Data — Row Padding
+`excel_write_range` automatically pads rows to equal length. You do NOT need to manually add empty strings to make all rows the same width. Just pass the data naturally.
+
+### Large Datasets (>1000 rows)
+For workbooks with thousands of rows, do NOT try to read the entire dataset into context. Instead:
+- Use `excel_get_used_range` to understand size
+- Read only headers (row 1) to understand columns
+- Write formulas (COUNTIF, SUMIF, AVERAGE, etc.) that compute over the range natively in Excel
+- This avoids token overflow and is faster than reading + computing in the agent
 
 ## Best Practices
 

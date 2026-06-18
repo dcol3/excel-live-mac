@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "excel-live-mac"
-version = "0.1.0"
+version = "0.2.0"
 description = "Live Excel MCP server for macOS — interact with running Excel instances in real time via xlwings"
 readme = "README.md"
 license = "MIT"

@@ -4,15 +4,18 @@ excel_live_mac — Live Excel MCP Server for macOS.
 Interacts with RUNNING Excel instances via the xlwings AppleScript bridge.
 Changes appear instantly in the open workbook.
 
-Tools (10):
+Tools (13):
   excel_list_workbooks     - List all currently open workbooks
   excel_get_sheet_names    - Get sheet names from an open workbook
+  excel_get_used_range     - Get dimensions of used range (rows, cols) without reading data
   excel_read_range         - Read a range as a 2D array
   excel_write_range        - Write a 2D array to a range (instant in Excel)
   excel_write_cell         - Write a single value or formula to a cell
   excel_read_cell          - Read a single cell value
+  excel_new_workbook       - Create a new blank workbook
   excel_open_workbook      - Open a workbook file (launches Excel if needed)
   excel_save_workbook      - Save the active or specified workbook
+  excel_add_sheet          - Add a new sheet to a workbook
   excel_run_macro          - Execute a VBA macro
   excel_get_selection      - Get the currently selected range info and values
 
@@ -124,6 +127,18 @@ async def list_tools() -> list:
             }
         ),
         types.Tool(
+            name="excel_get_used_range",
+            description="Get the dimensions of the used range in a sheet without reading cell data. Returns row count, column count, first cell, and last cell address. Use this to understand data size before reading.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "workbook": {"type": "string", "description": "Workbook name (or empty for active)"},
+                    "sheet": {"type": "string", "description": "Sheet name (or empty for active sheet)"}
+                },
+                "required": []
+            }
+        ),
+        types.Tool(
             name="excel_read_range",
             description="Read a range from an open workbook. Returns cell values as a 2D array.",
             inputSchema={
@@ -190,6 +205,28 @@ async def list_tools() -> list:
             }
         ),
         types.Tool(
+            name="excel_new_workbook",
+            description="Create a new blank workbook in Excel. Returns the workbook name. Save it with excel_save_workbook to persist to disk.",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        ),
+        types.Tool(
+            name="excel_add_sheet",
+            description="Add a new sheet to a workbook. Use this when you need a separate tab for a dashboard or summary. Does NOT work on CSV files — save as .xlsx first.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "workbook": {"type": "string", "description": "Workbook name (or empty for active)"},
+                    "name": {"type": "string", "description": "Name for the new sheet"},
+                    "after": {"type": "string", "description": "Name of existing sheet to place after (or empty for end)"}
+                },
+                "required": ["name"]
+            }
+        ),
+        types.Tool(
             name="excel_save_workbook",
             description="Save the specified (or active) workbook.",
             inputSchema={
@@ -251,6 +288,20 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list:
             sheets = [{"name": s.name, "index": i + 1} for i, s in enumerate(book.sheets)]
             return [types.TextContent(type="text", text=json.dumps({"workbook": book.name, "sheets": sheets}, indent=2))]
 
+        elif name == "excel_get_used_range":
+            book = _get_workbook(arguments.get("workbook", ""))
+            sheet_name = arguments.get("sheet", "")
+            ws = book.sheets[sheet_name] if sheet_name else book.sheets.active
+            used = ws.used_range
+            return [types.TextContent(type="text", text=json.dumps({
+                "workbook": book.name,
+                "sheet": ws.name,
+                "rows": used.shape[0],
+                "cols": used.shape[1],
+                "address": used.address,
+                "last_cell": used.last_cell.address,
+            }, indent=2))]
+
         elif name == "excel_read_range":
             book = _get_workbook(arguments.get("workbook", ""))
             sheet_name = arguments.get("sheet", "")
@@ -274,13 +325,18 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list:
             sheet_name = arguments.get("sheet", "")
             ws = book.sheets[sheet_name] if sheet_name else book.sheets.active
             rng = ws.range(arguments["range"])
-            rng.value = arguments["data"]
+            data = arguments["data"]
+            # Auto-pad rows to uniform length (fixes "must be same length" errors)
+            if data and isinstance(data[0], list):
+                max_cols = max(len(row) for row in data)
+                data = [row + [None] * (max_cols - len(row)) for row in data]
+            rng.value = data
             return [types.TextContent(type="text", text=json.dumps({
                 "status": "written",
                 "workbook": book.name,
                 "sheet": ws.name,
                 "range": arguments["range"],
-                "rows_written": len(arguments["data"]),
+                "rows_written": len(data) if isinstance(data, list) else 1,
             }, indent=2))]
 
         elif name == "excel_write_cell":
@@ -322,6 +378,30 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list:
                 "name": book.name,
                 "path": book.fullname,
                 "sheets": [s.name for s in book.sheets],
+            }, indent=2))]
+
+        elif name == "excel_new_workbook":
+            book = xw.Book()
+            return [types.TextContent(type="text", text=json.dumps({
+                "status": "created",
+                "name": book.name,
+                "sheets": [s.name for s in book.sheets],
+                "note": "Use excel_save_workbook with a path to save to disk."
+            }, indent=2))]
+
+        elif name == "excel_add_sheet":
+            book = _get_workbook(arguments.get("workbook", ""))
+            sheet_name = arguments["name"]
+            after = arguments.get("after", "")
+            if after:
+                new_sheet = book.sheets.add(sheet_name, after=book.sheets[after])
+            else:
+                new_sheet = book.sheets.add(sheet_name, after=book.sheets[-1])
+            return [types.TextContent(type="text", text=json.dumps({
+                "status": "created",
+                "sheet": new_sheet.name,
+                "workbook": book.name,
+                "all_sheets": [s.name for s in book.sheets],
             }, indent=2))]
 
         elif name == "excel_save_workbook":
