@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "excel-live-mac": {
+      "command": "uvx",
+      "args": ["excel-live-mac@latest"],
+      "env": {},
+      "disabled": false
+    }
+  }
+}
